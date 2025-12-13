@@ -1,6 +1,14 @@
 import { Action, ActionPanel, getPreferenceValues, Keyboard, List } from "@raycast/api";
 import { useState, useMemo, useCallback } from "react";
 import { useCachedPromise } from "@raycast/utils";
+import AddContact from "./add-contact";
+import AddOrganization from "./add-organization";
+
+interface Preferences {
+  domain: string;
+  apiToken: string;
+  limit: string;
+}
 
 export default function PipedriveSearch() {
   const [searchText, setSearchText] = useState("");
@@ -26,6 +34,14 @@ export default function PipedriveSearch() {
     activities: "📝",
     search: "🔎",
   };
+
+  function toTitleCase(input: string): string {
+    return input
+      .split(" ")
+      .filter((s) => s.length > 0)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  }
 
   const preferences: Preferences = getPreferenceValues();
   const addNewPersonURL = `https://${preferences.domain}/persons#dialog/person/add`;
@@ -73,6 +89,12 @@ export default function PipedriveSearch() {
               <ActionPanel>
                 <ActionPanel.Section>
                   <Action.OpenInBrowser title="Open in Browser" url={item.url} />
+                  <Action.Push
+                    title="Add New Contact"
+                    target={<AddContact />}
+                    shortcut={{ macOS: { modifiers: ["cmd"], key: "a" }, Windows: { modifiers: ["ctrl"], key: "a" } }}
+                    icon="👤"
+                  />
                   <Action.OpenInBrowser
                     title="Add New Person"
                     url={addNewPersonURL}
@@ -128,6 +150,39 @@ export default function PipedriveSearch() {
         }
         throttle
       >
+        {searchText.length >= 2 && !state.isLoading && (
+          <List.Section title="Create">
+            {(() => {
+              const titleCased = toTitleCase(searchText.trim());
+              return (
+                <>
+                  <List.Item
+                    title={`👤   Add ${titleCased} as a contact`}
+                    subtitle="Create a new contact in Pipedrive"
+                    actions={
+                      <ActionPanel>
+                        <Action.Push title="Add Contact" target={<AddContact prefillName={titleCased} />} icon="👤" />
+                      </ActionPanel>
+                    }
+                  />
+                  <List.Item
+                    title={`🏢   Add ${titleCased} as an organization`}
+                    subtitle="Create a new organization in Pipedrive"
+                    actions={
+                      <ActionPanel>
+                        <Action.Push
+                          title="Add Organization"
+                          target={<AddOrganization prefillName={titleCased} />}
+                          icon="🏢"
+                        />
+                      </ActionPanel>
+                    }
+                  />
+                </>
+              );
+            })()}
+          </List.Section>
+        )}
         {showOpenInBrowserActions()}
       </List>
     );
@@ -186,6 +241,12 @@ function SearchListItem({
         <ActionPanel>
           <ActionPanel.Section>
             <Action.OpenInBrowser title="Open in Browser" url={itemUrl} />
+            <Action.Push
+              title="Add New Contact"
+              target={<AddContact />}
+              shortcut={{ macOS: { modifiers: ["cmd"], key: "a" }, Windows: { modifiers: ["ctrl"], key: "a" } }}
+              icon="👤"
+            />
             {name && (
               <Action.CopyToClipboard title="Copy Name" content={name} shortcut={Keyboard.Shortcut.Common.New} />
             )}
